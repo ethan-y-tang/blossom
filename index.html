@@ -488,9 +488,7 @@ body.scroll-locked,html.scroll-locked { overflow:hidden; }
     <button class="rbtn" onclick="showGameInfo()">
       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>Info
     </button>
-    <button class="rbtn" onclick="shareGame()">
-      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>Share
-    </button>
+
   </div>
   <iframe id="frame" sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-modals allow-forms allow-downloads allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation"></iframe>
 </div>
@@ -521,7 +519,7 @@ body.scroll-locked,html.scroll-locked { overflow:hidden; }
 // ── CONFIG ────────────────────────────────────────────────────
 var REPO    = 'blossom-games/blossom';
 var BRANCH  = 'main';
-var RAW     = 'https://raw.githubusercontent.com/' + REPO + '/' + BRANCH;
+var RAW     = 'https://cdn.jsdelivr.net/gh/' + REPO + '@' + BRANCH;
 var PAGES   = 'https://blossom-games.github.io/blossom';
 
 var ANNOUNCE_WORKER = 'https://announce.ethantytang11.workers.dev/';
@@ -745,10 +743,10 @@ async function boot() {
   var grid = document.getElementById('grid');
   grid.innerHTML = '';
   for (var i = 0; i < 20; i++) { var s = document.createElement('div'); s.className = 'card-skeleton'; grid.appendChild(s); }
-  // Try GitHub Pages first, fall back to raw.githubusercontent.com
+  // Try GitHub Pages first, fall back to jsdelivr CDN
   var JSON_URLS = [
     PAGES + '/games.json',
-    'https://raw.githubusercontent.com/' + REPO + '/' + BRANCH + '/games.json'
+    'https://cdn.jsdelivr.net/gh/' + REPO + '@' + BRANCH + '/games.json'
   ];
   try {
     var games = null;
@@ -1081,12 +1079,7 @@ function downloadGame() {
     .catch(function(e) { toast('Download failed: ' + e); });
 }
 
-function shareGame() {
-  if (!activeGame) return;
-  var slug = activeGame.title.toLowerCase().replace(/\s+/g, '-');
-  var url  = location.origin + location.pathname + '?play=' + slug;
-  navigator.clipboard.writeText(url).then(function() { toast('🔗 Link copied!'); }).catch(function() { toast('🔗 ' + url); });
-}
+
 
 // ── GAME INFO POPUP ───────────────────────────────────────────
 function showGameInfo() {
