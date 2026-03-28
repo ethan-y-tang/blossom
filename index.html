@@ -391,7 +391,7 @@ body.scroll-locked,html.scroll-locked { overflow:hidden; }
 <!-- ══ HEADER ═════════════════════════════════════════════════ -->
 <header>
   <div class="logo-wrap">
-    <img class="logo-img" src="https://blossom-games.github.io/blossom/logo.png" alt="Blossom"
+    <img class="logo-img" src="https://blossom.is-a-good.dev/art/logo.png" alt="Blossom"
       onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
     <div class="logo-img-fallback">🌸</div>
     <div class="logo">Blossom</div>
@@ -517,17 +517,14 @@ body.scroll-locked,html.scroll-locked { overflow:hidden; }
 
 <script>
 // ── CONFIG ────────────────────────────────────────────────────
-var REPO    = 'blossom-games/blossom';
-var BRANCH  = 'main';
-var RAW     = 'https://cdn.jsdelivr.net/gh/' + REPO + '@' + BRANCH;
-var PAGES   = 'https://blossom-games.github.io/blossom';
+var PAGES   = 'https://blossom.is-a-good.dev/art';
 
 var ANNOUNCE_WORKER = 'https://announce.ethantytang11.workers.dev/';
 var UPDATE_WORKER   = 'https://browserupdate.ethantytang11.workers.dev/';
 
 var FILE_VERSION = '1.0';
 
-var allGames = [], allCards = [], activeGame = null, blobUrl = null;
+var allGames = [], allCards = [], activeGame = null;
 var currentTab = 'all';
 var popularityData = {};
 var activeTagFilter = '';
@@ -743,22 +740,10 @@ async function boot() {
   var grid = document.getElementById('grid');
   grid.innerHTML = '';
   for (var i = 0; i < 20; i++) { var s = document.createElement('div'); s.className = 'card-skeleton'; grid.appendChild(s); }
-  // Try GitHub Pages first, fall back to jsdelivr CDN
-  var JSON_URLS = [
-    PAGES + '/games.json',
-    'https://cdn.jsdelivr.net/gh/' + REPO + '@' + BRANCH + '/games.json'
-  ];
   try {
-    var games = null;
-    var lastErr = null;
-    for (var _i = 0; _i < JSON_URLS.length; _i++) {
-      try {
-        var r = await fetch(JSON_URLS[_i] + '?t=' + Date.now());
-        if (r.ok) { games = await r.json(); break; }
-        lastErr = 'games.json — ' + r.status + ' (' + JSON_URLS[_i] + ')';
-      } catch(_e) { lastErr = _e.message; }
-    }
-    if (!games) throw new Error(lastErr || 'All sources failed');
+    var r = await fetch(PAGES + '/games.json?t=' + Date.now());
+    if (!r.ok) throw new Error('games.json — ' + r.status);
+    var games = await r.json();
 
     // Support both blossom-style (title+link) and gnmath-style (name+url) entries
     // Entries with link="#" are announcements -- excluded from the playable grid
@@ -766,7 +751,7 @@ async function boot() {
       .filter(function(g) {
         var link = g.link || g.url || '';
         var title = g.title || g.name || '';
-        return link && title && link !== '#' && !link.startsWith('http');
+        return link && title && link !== '#';
       })
       .map(function(g) {
         // Normalize to blossom schema
@@ -827,9 +812,6 @@ function isNewGame(g) {
 }
 
 // ── IMAGE URL ─────────────────────────────────────────────────
-// For blossom-games/blossom: games are single HTML files in folders.
-// e.g. link = "snake/index.html" → game at PAGES/snake/index.html
-// image field is relative to repo root too.
 function resolveImage(g) {
   if (!g.image) return null;
   if (g.image.startsWith('http')) return g.image;
@@ -977,52 +959,25 @@ function launchRandom() {
 }
 
 // ── LAUNCH ────────────────────────────────────────────────────
-// All games are single HTML files. The link field is like "snake/index.html"
-// We fetch the raw file and inject it via blob + base tag so relative paths work.
 function launch(game) {
   activeGame = game;
   incrementPlayCount(game.title);
   addRecent(game);
 
-  // The game is always a single HTML file; external scripts (jsdelivr etc.) 
-  // work fine because we inject a <base> tag pointing to the folder.
-  var gameFolder = PAGES + '/' + game.link.substring(0, game.link.lastIndexOf('/') + 1);
-  var gameUrl    = PAGES + '/' + game.link;
-
-  var spinner = '<!DOCTYPE html><html><head>'
-    + '<base href="' + gameFolder + '">'
-    + '<style>*{margin:0;padding:0}body{background:#0a0306;display:flex;align-items:center;justify-content:center;height:100vh}.r{width:32px;height:32px;border-radius:50%;border:2px solid rgba(222,49,99,.18);border-top-color:#DE3163;animation:s .7s linear infinite}@keyframes s{to{transform:rotate(360deg)}}</style>'
-    + '</head><body><div class="r"></div>'
-    + '<script>'
-    + 'fetch(' + JSON.stringify(gameUrl) + ',{cache:"no-store"})'
-    + '.then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.text();})'
-    + '.then(function(html){'
-    + 'var b=\'<base href="' + gameFolder + '">\';'
-    + 'html=/<head[\\s>]/i.test(html)?html.replace(/(<head[^>]*>)/i,"$1\\n"+b):b+html;'
-    + 'document.open("text/html");document.write(html);document.close();'
-    + '})'
-    + '.catch(function(e){document.body.innerHTML=\'<div style="font:14px/1.6 sans-serif;color:#F88379;padding:32px;text-align:center"><div style="font-size:32px;margin-bottom:12px">\u{1F635}</div>Failed to load<br><span style="opacity:.6;font-size:12px">\'+e.message+\'</span></div>\';});'
-    + '<\/script></body></html>';
-
-  var blob = new Blob([spinner], { type:'text/html' });
-  if (blobUrl) URL.revokeObjectURL(blobUrl);
-  blobUrl = URL.createObjectURL(blob);
-
-  document.getElementById('frame').src = blobUrl;
+  var gameUrl = game.link.startsWith('http') ? game.link : PAGES + '/' + game.link;
+  document.getElementById('frame').src = gameUrl;
   document.getElementById('runner-title').textContent = game.title;
   document.getElementById('runner').classList.remove('closing');
   document.getElementById('runner').classList.add('open');
   document.documentElement.classList.add('scroll-locked');
   document.body.classList.add('scroll-locked');
 
-  // Update URL
   try {
     var url = new URL(window.location);
     url.searchParams.set('play', game.title.toLowerCase().replace(/\s+/g, '-'));
     history.pushState(null, '', url.toString());
   } catch(e) {}
 }
-
 // ── CONTROLS ─────────────────────────────────────────────────
 function closeGame() {
   var runner = document.getElementById('runner');
@@ -1031,7 +986,6 @@ function closeGame() {
   document.getElementById('frame').src = 'about:blank';
   document.documentElement.classList.remove('scroll-locked');
   document.body.classList.remove('scroll-locked');
-  if (blobUrl) { URL.revokeObjectURL(blobUrl); blobUrl = null; }
   try {
     var url = new URL(window.location);
     url.searchParams.delete('play');
@@ -1049,35 +1003,11 @@ function fullscreenGame() {
 
 function openInNewTab() {
   if (!activeGame) return;
-  var gameUrl = PAGES + '/' + activeGame.link;
-  var gameFolder = PAGES + '/' + activeGame.link.substring(0, activeGame.link.lastIndexOf('/') + 1);
-  // Open blank window and write the game HTML into it with base tag
-  fetch(gameUrl + '?t=' + Date.now())
-    .then(function(r) { return r.ok ? r.text() : Promise.reject('HTTP ' + r.status); })
-    .then(function(html) {
-      var base = '<base href="' + gameFolder + '">';
-      html = /<head[\s>]/i.test(html) ? html.replace(/(<head[^>]*>)/i, '$1\n' + base) : base + html;
-      var w = window.open('about:blank', '_blank');
-      if (w) { w.document.open(); w.document.write(html); w.document.close(); }
-    })
-    .catch(function(e) { toast('Failed to open: ' + e); });
+  var gameUrl = activeGame.link.startsWith('http') ? activeGame.link : PAGES + '/' + activeGame.link;
+  window.open(gameUrl, '_blank');
 }
 
-function downloadGame() {
-  if (!activeGame) return;
-  var gameUrl = PAGES + '/' + activeGame.link;
-  fetch(gameUrl + '?t=' + Date.now())
-    .then(function(r) { return r.ok ? r.text() : Promise.reject('HTTP ' + r.status); })
-    .then(function(html) {
-      var blob = new Blob([html], { type:'text/html;charset=utf-8' });
-      var a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = activeGame.title + '.html';
-      document.body.appendChild(a); a.click(); document.body.removeChild(a);
-      URL.revokeObjectURL(a.href);
-    })
-    .catch(function(e) { toast('Download failed: ' + e); });
-}
+
 
 
 
